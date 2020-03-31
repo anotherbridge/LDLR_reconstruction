@@ -37,3 +37,6 @@ plot(xP, circshift(uL,1,2), 'r--')
 plot(xP, uR, 'g--')
 xlim([min(xP)-0.05, max(xx)+0.05])
 legend({'$u_{\Delta x}$', '$u^{\rm L}$', '$u^{\rm R}$', '$u_{\rm{exact}}$'},'Interpreter','latex', 'FontSize', 14, 'Location', 'best')
+xlabel('$x$', 'Interpreter', 'latex');
+ylabel('$u$', 'Interpreter', 'latex');
+title('Visualization of LDLR');

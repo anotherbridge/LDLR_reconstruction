@@ -7,7 +7,7 @@ echo off; clear; clc; close all;
 %------------------%
 % Input Parameters %
 %------------------%
-n = 500;
+n = 200;
 gamma = 1.4;
 testCase = 1;
 numericalFlux = 'vanLeer';
