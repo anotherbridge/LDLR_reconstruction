@@ -7,9 +7,9 @@ echo off; clear; clc; close all;
 %------------------%
 % Input Parameters %
 %------------------%
-n = 200;
+n = 500;
 gamma = 1.4;
-testCase = 1;
+testCase = 2;
 numericalFlux = 'vanLeer';
 
 runSimulation(n, gamma, testCase, numericalFlux);

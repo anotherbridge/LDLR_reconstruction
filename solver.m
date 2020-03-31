@@ -33,7 +33,7 @@ classdef solver < handle
     end
 
     properties (Constant)
-        CFL = 0.6;  % max- CFL-number allowed 
+        CFL = 0.8;  % max- CFL-number allowed 
                     % (for stability CFL = 1 is required)
         q = 1.4;    % exponent for controlling resolution and robustness
     end
@@ -98,6 +98,16 @@ classdef solver < handle
             toc;
             %close(f);
             disp('Succesfully computed the solution with ' + string(obj.nT) + ' time steps.')
+        end
+        
+        function [rho, v, p, E, c, M, T] = getResults(obj)
+            rho = obj.rho;
+            v = obj.v;
+            p = obj.p;
+            E = obj.E;
+            c = obj.c;
+            M = obj.M;
+            T = obj.t(end);
         end
         
         function animate(obj, property, playTime)
@@ -224,7 +234,12 @@ classdef solver < handle
              aMax = max(max(abs(aL)), max(abs(aR)));
              obj.dt = obj.dx * obj.CFL / aMax;
              obj.fluxHandle.setTimeStep(obj.dt);
-             obj.t = [obj.t, obj.t(end)+obj.dt];
+             if (obj.t(end) + obj.dt) < obj.T
+                obj.t = [obj.t, obj.t(end)+obj.dt];
+             else
+                obj.dt = obj.T - obj.t(end);
+                obj.t = [obj.t, obj.T];
+             end
              obj.nT = obj.nT + 1;
         end
        
