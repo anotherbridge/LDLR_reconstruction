@@ -227,8 +227,8 @@ classdef solver < handle
             UGhost = obj.setGhostCells(U);
             [UL, UR] = obj.r.reconstructValuesLDLR(UGhost, obj.BC);
             %FL = F_{i-0.5}; FR = F_{i+0.5}
-            FL = obj.fluxHandle.calculateNumericalFlux(UL(:,1:end-2), UR(:,2:end-1), obj.fluxType);
-            FR = obj.fluxHandle.calculateNumericalFlux(UL(:,2:end-1), UR(:,3:end), obj.fluxType);
+            FL = obj.fluxHandle.calculateNumericalFlux(UL(:,1:end-2), U(:,2:end-1), obj.fluxType);
+            FR = obj.fluxHandle.calculateNumericalFlux(UGhost(:,2:end-1), UGhost(:,3:end), obj.fluxType);
             L = - (FR - FL) / obj.dx;
         end
         
@@ -245,6 +245,53 @@ classdef solver < handle
             end
         end
 
+%         function L = calculateRightHandSide(obj, U)
+%             switch obj.BC 
+%                 case 'periodic'
+%                     [FL, FR] = obj.calculateRHSPeriodic(U);
+%                 case 'transmissive'
+%                     [FL, FR] = obj.calculateRHSTransmissive(U);
+%                 case 'reflectiveRight'
+%                     [FL, FR] = obj.calculateRHSReflectiveRight(U);
+%                 case 'reflectiveFull'
+%                     [FL, FR] = obj.calculateRHSReflectiveFull(U);
+%             end
+%             L = - (FR - FL) / obj.dx;
+%         end
+%         
+%         function [FL, FR] = calculateRHSPeriodic(obj, U)
+%             [UL, UR] = obj.r.reconstructValuesLDLR(U, obj.BC);
+%             FL = obj.fluxHandle.calculateNumericalFlux(circshift(UL,1,2), UR, obj.fluxType);
+%             FR = obj.fluxHandle.calculateNumericalFlux(UL, circshift(UR,-1,2), obj.fluxType);
+%         end
+%         
+%         function [FL, FR] = calculateRHSTransmissive(obj, U)
+%             [UL, UR] = obj.r.reconstructValuesLDLR(U, obj.BC);
+%             [~, URshiftR] = obj.r.reconstructValuesLDLR([U(:,2:end), U(:,end)], obj.BC);
+%             [ULshiftL, ~] = obj.r.reconstructValuesLDLR([U(:,1), U(:,1:end-1)], obj.BC);
+%             FL = obj.fluxHandle.calculateNumericalFlux(ULshiftL, UR, obj.fluxType);
+%             FR = obj.fluxHandle.calculateNumericalFlux(UL, URshiftR, obj.fluxType);
+%         end
+%         
+%         function [FL, FR] = calculateRHSReflectiveRight(obj, U)
+%             [UL, UR] = obj.r.reconstructValuesLDLR(U, obj.BC);
+%             [~, URshiftR] = obj.r.reconstructValuesLDLR([U(:,2:end), ...
+%                             [U(1,end); -U(2,end); U(3,end)]], obj.BC);
+%             [ULshiftL, ~] = obj.r.reconstructValuesLDLR([U(:,1), U(:,1:end-1)], obj.BC);
+%             FL = obj.fluxHandle.calculateNumericalFlux(ULshiftL, UR, obj.fluxType);
+%             FR = obj.fluxHandle.calculateNumericalFlux(UL, URshiftR, obj.fluxType);
+%         end
+%         
+%         function [FL, FR] = calculateRHSReflectiveFull(obj, U)
+%             [UL, UR] = obj.r.reconstructValuesLDLR(U, obj.BC);
+%             [~, URshiftR] = obj.r.reconstructValuesLDLR([U(:,2:end), ...
+%                             [U(1,end); -U(2,end); U(3,end)]], obj.BC);
+%             [ULshiftL, ~] = obj.r.reconstructValuesLDLR([[U(1,1); -U(2,1); U(3,1)], ...
+%                             U(:,1:end-1)], obj.BC);
+%             FL = obj.fluxHandle.calculateNumericalFlux(ULshiftL, UR, obj.fluxType);
+%             FR = obj.fluxHandle.calculateNumericalFlux(UL, URshiftR, obj.fluxType);
+%         end
+%         
         function setTimeStep(obj)
              [aL, aR] = obj.calculateEigenvalue();
              aMax = max(max(abs(aL)), max(abs(aR)));

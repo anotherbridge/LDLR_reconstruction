@@ -37,25 +37,21 @@ classdef reconstructor < handle
             UR = U - 0.5 * sigma * obj.dx;
         end
         
-        function [UL, UR] = reconstructValuesLDLR(obj, U, BC)
-            UGhost = obj.setGhostCells(U, BC);
-            [UL, UR] = obj.calculateValuesLDLR(UGhost);
+        function [UL, UR] = reconstructValuesLDLR(obj, UGhost)
+            % Lateral derivatives
+            d1 = (UGhost(2:end-1) - UGhost(1:end-2)) / obj.dx;
+            d2 = (UGhost(3:end) - UGhost(2:end-1)) / obj.dx;
+            
+            [a, ~, c, d] = obj.calculateReconstructionCoefficients(d1, d2);
+            [etaAP, etaBP, etaAM, etaBM] = obj.etaFunction(a);
+            
+            UL = UGhost(2:end-1 + obj.dx * (c .* etaAP + d .* etaBP);
+            UR = U + obj.dx * (c .* etaAM + d .* etaBM); 
         end
     end
         
     methods (Access = private)
-        function UGhost = setGhostCells(obj, U, BC)
-            switch BC
-                case 'periodic'
-                    UGhost = [U(:,end), U, U(:,1)];
-                case 'transmissive'
-                    UGhost = [U(:,1), U, U(:,end)];
-                case 'reflectiveRight'
-                    UGhost = [U(:,1), U, [U(1,end); -U(2,end); U(3,end)]];
-                case 'reflectiveFull'
-                    UGhost = [[U(1,1); -U(2,1); U(3,1)], U, [U(1,end); -U(2,end); U(3,end)]];
-            end
-        end
+
         
         function Phi = minModLimiter(obj, UL, UR)
             Theta = UL ./ UR;
@@ -67,16 +63,56 @@ classdef reconstructor < handle
             Phi = (Theta + abs(Theta)) ./ (1 + Theta);
         end
         
-        function [UL, UR] = calculateValuesLDLR(obj, UGhost)
+        function [UL, UR] = reconstructValuesTransmissiveLDLR(obj, U)
             % Lateral derivatives
-            d1 = (UGhost(:,2:end-1) - UGhost(:,1:end-2)) / obj.dx;
-            d2 = (UGhost(:,3:end) - UGhost(:,2:end-1)) / obj.dx;
+            d1 = (U - [U(:,1), U(:,1:end-1)]) / obj.dx;
+            d2 = ([U(:,2:end), U(:,end)] - U) / obj.dx;
             
             [a, ~, c, d] = obj.calculateReconstructionCoefficients(d1, d2);
             [etaAP, etaBP, etaAM, etaBM] = obj.etaFunction(a);
             
-            UL = UGhost(:,2:end-1) + obj.dx * (c .* etaAP + d .* etaBP);
-            UR = UGhost(:,2:end-1) + obj.dx * (c .* etaAM + d .* etaBM); 
+            UL = U + obj.dx * (c .* etaAP + d .* etaBP);
+            UR = U + obj.dx * (c .* etaAM + d .* etaBM);
+        end
+        
+        function [UL, UR] = reconstructValuesReflectiveRightLDLR(obj, U)
+            % Lateral derivatives
+            d1 = (U - [U(:,1), U(:,1:end-1)]) / obj.dx;
+            d2 = ([U(:,2:end), [U(1,end); -U(2,end); U(3,end)]] - U) / obj.dx;
+            
+            [a, ~, c, d] = obj.calculateReconstructionCoefficients(d1, d2);
+            [etaAP, etaBP, etaAM, etaBM] = obj.etaFunction(a);
+            
+            UL = U + obj.dx * (c .* etaAP + d .* etaBP);
+            UR = U + obj.dx * (c .* etaAM + d .* etaBM);
+        end
+        
+        function [UL, UR] = reconstructValuesReflectiveFullLDLR(obj, U)
+            % Lateral derivatives
+            d1 = (U - [[U(1,1); -U(2,1); U(3,1)], U(:,1:end-1)]) / obj.dx;
+            d2 = ([U(:,2:end), [U(1,end); -U(2,end); U(3,end)]] - U) / obj.dx;
+            
+            [a, ~, c, d] = obj.calculateReconstructionCoefficients(d1, d2);
+            [etaAP, etaBP, etaAM, etaBM] = obj.etaFunction(a);
+            
+            UL = U + obj.dx * (c .* etaAP + d .* etaBP);
+            UR = U + obj.dx * (c .* etaAM + d .* etaBM);
+        end
+        
+        function [UL, UR] = reconstructValuesPeriodicLDLR(obj, U)
+            % Lateral derivatives
+            UM1 = circshift(U,1,2);
+            %UM1(:,1) = UM1(:,end);
+            UP1 = circshift(U,-1,2);
+            %UP1(:,end) = UP1(:,1);
+            d1 = (U - UM1) / obj.dx;
+            d2 = (UP1 - U) / obj.dx;
+            
+            [a, ~, c, d] = obj.calculateReconstructionCoefficients(d1, d2);
+            [etaAP, etaBP, etaAM, etaBM] = obj.etaFunction(a);
+
+            UL = U + obj.dx * (c .* etaAP + d .* etaBP);
+            UR = U + obj.dx * (c .* etaAM + d .* etaBM);
         end
         
         function [a, b, c, d] = calculateReconstructionCoefficients(obj, d1, d2)

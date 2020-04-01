@@ -9,7 +9,7 @@ echo off; clear; clc; close all;
 %------------------%
 n = 100;
 gamma = 1.4;
-testCase = 2;
+testCase = 3;
 numericalFlux = 'HLL';
 
 runSimulation(n, gamma, testCase, numericalFlux);
