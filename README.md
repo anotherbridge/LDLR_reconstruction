@@ -6,7 +6,7 @@ The solver uses a semi-discrete method to solve the 1D-Euler-equations.
 To approximate the flux function the following numerical fluxes are implemented
 * van-Leer flux vector splitting (option: vanLeer),
 * Lax-Friedrichs flux (option: LF) and
-* Harten-Lax-van-Leer (option: HLL).
+* Harten-Lax-van-Leer flux (option: HLL).
 
 The reconstruction of the values on the cell interfaces is calculated
 via the third order Local-Double-Logarithmic-Reconstruction (LDLR). 
@@ -18,10 +18,22 @@ numerical solution.
 Calculations are done on an equidistant grid. 
 Initial conditions need to be given in the form of densitiy, velocity and
 pressure.
-Two test cases are implemented. One is the Sod problem. The other one is
-a smooth problem for which there exists an exact solution which could be
-used for testing accuracy. Other test cases can be implemented.
-Periodic boundary conditions can used.
+
+Implemented boundary conditions (BCs):
+* transmissive boundaries (option: transmissive)
+* periodic BCs (option: periodic)
+* transmissive left boundary, reflective right boundary (option: reflectiveRight)
+* both boundaries reflective (option: reflectiveFull)
+If no BC is given to the solver class transmissive boundaries are set as default.
+
+Test cases available in *main.m*:
+* Sod problem (testCase = 1)
+* Smooth problem (testCase = 2)
+* Lax problem with reflective right boundary (testCase = 3)
+* Lax problem with both boundaries reflective (testCase = 4)
+* Shu-Osher shock-acoustic problem (testCase = 5)
+
+
 
 # Literature
 * **[1]** Artebrant, R. and Schroll, H.-J. "Limiter-Free Third Order Logarithmic Reconstruction"

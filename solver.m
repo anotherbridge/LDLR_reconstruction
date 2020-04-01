@@ -46,12 +46,15 @@ classdef solver < handle
             elseif nargin < 7
                 fluxType = 'HLL';
             elseif nargin < 8
-                BC = 'none';
+                BC = 'transmissive';
             end
             
             obj.fluxType = fluxType;
             obj.BC = BC;
-            if not(strcmp(obj.BC,'none') | strcmp(obj.BC, 'periodic'))
+            if not(strcmp(obj.BC,'transmissive')     | ...
+                   strcmp(obj.BC, 'periodic')        | ...
+                   strcmp(obj.BC, 'reflectiveRight') | ...
+                   strcmp(obj.BC, 'reflectiveFull'))
                 error('Invalid boundary condition given!');
             end
             
@@ -88,15 +91,16 @@ classdef solver < handle
         
         function solve(obj)
             disp('Solving the System...')
-            %f = waitbar(0,'Solving the System...');
+            f = waitbar(0,'Solving the System...');
             tic;
+            %for i = 1:obj.nT
             while obj.t(end) < obj.T
                 obj.performUpdateStep();
                 obj.assignResults();
-                %waitbar(i/obj.nT,f,'Solving the System...');
+                waitbar(obj.t(end)/obj.T,f,'Solving the System...');
             end
             toc;
-            %close(f);
+            close(f);
             disp('Succesfully computed the solution with ' + string(obj.nT) + ' time steps.')
         end
         
@@ -173,14 +177,19 @@ classdef solver < handle
         
         function animateAll(obj, playTime)
             figure(1);
+            dec = 10; % Factor for rounding up or down to decimal places
             set(1, 'CurrentAxes', obj.figRho);
             pltRho = plot(obj.x, obj.rho(1,:), 'Color', 'blue');
+            ylim([floor(dec*min(min(obj.rho)))/dec, ceil(dec*max(max(obj.rho)))/dec]);
             set(1, 'CurrentAxes', obj.figV);
             pltV = plot(obj.x, obj.v(1,:), 'Color', 'blue');
+            ylim([floor(dec*min(min(obj.v)))/dec, ceil(dec*max(max(obj.v)))/dec]);
             set(1, 'CurrentAxes', obj.figP);
             pltP = plot(obj.x, obj.p(1,:), 'Color', 'blue');
+            ylim([floor(dec*min(min(obj.p)))/dec, ceil(dec*max(max(obj.p)))/dec]);
             set(1, 'CurrentAxes', obj.figE);
             pltE = plot(obj.x, obj.E(1,:), 'Color', 'blue');
+            ylim([floor(dec*min(min(obj.E)))/dec, ceil(dec*max(max(obj.E)))/dec]);
             
             nTime = length(obj.t);
             
@@ -210,23 +219,55 @@ classdef solver < handle
             if obj.CFLconditionSatisfied()
                 obj.performTimeUpdate();
             else
-                error('CFL condition is not satisfied!')
+                warning('CFL condition is not satisfied!')
             end
         end
         
         function L = calculateRightHandSide(obj, U)
-            if strcmp(obj.BC, 'periodic')
-                [UL, UR] = obj.r.reconstructValuesPeriodicLDLR(U);
-                FL = obj.fluxHandle.calculateNumericalFlux(circshift(UL,1,2), UR, obj.fluxType);
-                FR = obj.fluxHandle.calculateNumericalFlux(UL, circshift(UR,-1,2), obj.fluxType);
-            else
-                [UL, UR] = obj.r.reconstructValuesLDLR(U);
-                [~, URshiftR] = obj.r.reconstructValuesLDLR([U(:,2:end), U(:,end)]);
-                [ULshiftL, ~] = obj.r.reconstructValuesLDLR([U(:,1), U(:,1:end-1)]);
-                FL = obj.fluxHandle.calculateNumericalFlux(ULshiftL, UR, obj.fluxType);
-                FR = obj.fluxHandle.calculateNumericalFlux(UL, URshiftR, obj.fluxType);
+            switch obj.BC 
+                case 'periodic'
+                    [FL, FR] = obj.calculateRHSPeriodic(U);
+                case 'transmissive'
+                    [FL, FR] = obj.calculateRHSTransmissive(U);
+                case 'reflectiveRight'
+                    [FL, FR] = obj.calculateRHSReflectiveRight(U);
+                case 'reflectiveFull'
+                    [FL, FR] = obj.calculateRHSReflectiveFull(U);
             end
             L = - (FR - FL) / obj.dx;
+        end
+        
+        function [FL, FR] = calculateRHSPeriodic(obj, U)
+            [UL, UR] = obj.r.reconstructValuesLDLR(U, obj.BC);
+            FL = obj.fluxHandle.calculateNumericalFlux(circshift(UL,1,2), UR, obj.fluxType);
+            FR = obj.fluxHandle.calculateNumericalFlux(UL, circshift(UR,-1,2), obj.fluxType);
+        end
+        
+        function [FL, FR] = calculateRHSTransmissive(obj, U)
+            [UL, UR] = obj.r.reconstructValuesLDLR(U, obj.BC);
+            [~, URshiftR] = obj.r.reconstructValuesLDLR([U(:,2:end), U(:,end)], obj.BC);
+            [ULshiftL, ~] = obj.r.reconstructValuesLDLR([U(:,1), U(:,1:end-1)], obj.BC);
+            FL = obj.fluxHandle.calculateNumericalFlux(ULshiftL, UR, obj.fluxType);
+            FR = obj.fluxHandle.calculateNumericalFlux(UL, URshiftR, obj.fluxType);
+        end
+        
+        function [FL, FR] = calculateRHSReflectiveRight(obj, U)
+            [UL, UR] = obj.r.reconstructValuesLDLR(U, obj.BC);
+            [~, URshiftR] = obj.r.reconstructValuesLDLR([U(:,2:end), ...
+                            [U(1,end); -U(2,end); U(3,end)]], obj.BC);
+            [ULshiftL, ~] = obj.r.reconstructValuesLDLR([U(:,1), U(:,1:end-1)], obj.BC);
+            FL = obj.fluxHandle.calculateNumericalFlux(ULshiftL, UR, obj.fluxType);
+            FR = obj.fluxHandle.calculateNumericalFlux(UL, URshiftR, obj.fluxType);
+        end
+        
+        function [FL, FR] = calculateRHSReflectiveFull(obj, U)
+            [UL, UR] = obj.r.reconstructValuesLDLR(U, obj.BC);
+            [~, URshiftR] = obj.r.reconstructValuesLDLR([U(:,2:end), ...
+                            [U(1,end); -U(2,end); U(3,end)]], obj.BC);
+            [ULshiftL, ~] = obj.r.reconstructValuesLDLR([[U(1,1); -U(2,1); U(3,1)], ...
+                            U(:,1:end-1)], obj.BC);
+            FL = obj.fluxHandle.calculateNumericalFlux(ULshiftL, UR, obj.fluxType);
+            FR = obj.fluxHandle.calculateNumericalFlux(UL, URshiftR, obj.fluxType);
         end
         
         function setTimeStep(obj)
