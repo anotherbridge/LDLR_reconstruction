@@ -1,3 +1,6 @@
+# Author
+André Breuer
+
 # Information
 The solver uses a semi-discrete method to solve the 1D-Euler-equations. 
 To approximate the flux function the following numerical fluxes are implemented
