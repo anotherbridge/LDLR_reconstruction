@@ -7,7 +7,7 @@ echo off; clear; clc; close all;
 % Convergence is going to be checked at time T=1
 
 lblSize = 12;
-nVec = [8, 16, 32, 64, 128, 256];%, 512, 1024];
+nVec = [8, 16, 32, 64, 128, 256, 512, 1024];
 gamma = 1.4;
 T = 1;
 numericalFlux = 'vanLeer';
@@ -18,8 +18,10 @@ err    = [];
 disp('Error calculation...')
 for n = nVec
     fprintf('\nn = %d\n', n);
-    x = linspace(-pi, pi, n);
-    dx = x(2) - x(1);
+    % Correction so that the endpoint is only included once for PBC
+    dx = 2*pi/n;
+    x = -pi:dx:pi;
+    x = x(1:end-1);
     dxVec = [dxVec, dx];
         
     % Compute numerical solution
@@ -33,11 +35,11 @@ for n = nVec
     % Compute analytic solution in density (v = v0, p = p0)
     rhoEx = 1 + 0.2 * sin(x - tEnd);
     
-    uDiff = [abs(rho(end,:) - rhoEx);
+    uErr = [abs(rho(end,:) - rhoEx);
              abs(v(end,:) - v0);
              abs(p(end,:) - p0)];
     % Calculate L1 error
-    err = [err, sum(uDiff, 2)*dx];
+    err = [err, sum(uErr, 2)*dx];
 end
 
 % Plot the error
@@ -56,16 +58,16 @@ for i = 1:3
     xlabel('$\Delta x$', 'Interpreter', 'latex', 'FontSize', lblSize);
     switch i
         case 1 
-            str = '$|| \rho_{\rm exact} - \rho ||_{L^1 ([-\pi,\pi])}$';
+            str = '$|| \rho - \rho_{\rm exact} ||_{L^1 ([-\pi,\pi]xT)}$';
         case 2
-            str = '$|| p_{\rm exact} - p ||_{L^1 ([-\pi,\pi])}$';
+            str = '$|| p_{\rm exact} - p ||_{L^1 ([-\pi,\pi]xT)}$';
         case 3
-            str = '$|| v_{\rm exact} - v ||_{L^1 ([-\pi,\pi])}$';
+            str = '$|| v_{\rm exact} - v ||_{L^1 ([-\pi,\pi]xT)}$';
     end
     ylabel(str, 'Interpreter', 'latex', 'FontSize', lblSize);
     plot(x_fitlog, y_fitlog, 'b-');
     xlim([min(dxVec),max(dxVec)]);
-    title('Order of convergence: $\Delta t^{' + string(abs(p(1))) + '}$', 'Interpreter','latex', 'FontSize', lblSize+4);
+    title('Order of convergence: $\Delta x^{' + string(abs(p(1))) + '}$', 'Interpreter','latex', 'FontSize', lblSize+4);
     grid on
 end
 
@@ -73,7 +75,7 @@ figure(4)
 plot(x, rho(end,:), 'r-')
 hold on
 grid on
-xlim([-pi, pi])
+xlim([min(x), max(x)])
 xlabel('$x$', 'Interpreter', 'latex', 'Fontsize', lblSize);
 ylabel('$\rho$', 'Interpreter', 'latex', 'Fontsize', lblSize);
 plot(x, 1 + 0.2 * sin(x - tEnd), 'b-')

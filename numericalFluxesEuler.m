@@ -34,22 +34,26 @@ classdef numericalFluxesEuler < handle
                     error('Invalid flux function choosen...');
             end
         end
-        
+    end
+    
+    methods (Access = private)
         function F = calculateHLLFlux(obj, UL, UR)
-             [aL, aR] = obj.calculateEigenvalues(UL, UR);
-             fL = obj.fluxFunction(UL);
-             fR = obj.fluxFunction(UR);
-%              if not(obj.CFLconditionSatisfied(max(max(abs(aL)), max(abs(aR)))))
-%                  error('CFL-condition for HLL flux is not satisfied at current time step!!'); 
-%              end
-             aL = repmat(aL, 3, 1);
-             aR = repmat(aR, 3, 1);
-             F = (aR .* fL - aL .* fR + aL .* aR .* (UR - UL)) ./ (aR - aL);             
-             F(aL >= 0) = fL(aL >= 0);
-             F(aR <= 0) = fR(aR <= 0);
+            [aL, aR] = obj.calculateEigenvalues(UL, UR);
+            fL = obj.fluxFunction(UL);
+            fR = obj.fluxFunction(UR);
+             
+            aL = repmat(aL, 3, 1);
+            aR = repmat(aR, 3, 1);
+            F = (aR .* fL - aL .* fR + aL .* aR .* (UR - UL)) ./ (aR - aL);             
+            F(aL >= 0) = fL(aL >= 0);
+            F(aR <= 0) = fR(aR <= 0);
         end
         
         function F = calculateVanLeerFlux(obj, UL, UR)
+            % All eigenvalues are negative for  M  < -1
+            % All eigenvalues are positive for  M  >  1
+            % Eigenvalues have mixed signs for |M| <= 1
+
             F = obj.vanLeerFluxPlus(UL) + obj.vanLeerFluxMinus(UR);
         end
         
@@ -57,9 +61,7 @@ classdef numericalFluxesEuler < handle
             fL = obj.fluxFunction(UL);
             fR = obj.fluxFunction(UR);
             aMax = max(obj.calculateMaxEigenvalue(UL), obj.calculateMaxEigenvalue(UR));
-%             if not(obj.CFLconditionSatisfied(aMax))
-%                 %error('CFL-condition for LF flux is not satisfied at current time step!!'); 
-%             end
+
             F = 0.5 * (fL + fR - obj.dt / obj.dx * abs(aMax) .* (UR - UL));
         end
         
@@ -68,9 +70,7 @@ classdef numericalFluxesEuler < handle
             c = sqrt(obj.gamma * ((obj.gamma - 1) * (U(3,:) - 0.5 * U(2,:).^2 ./ U(1,:))) ./ U(1,:));
             aMax = abs(v) + c;
         end
-    end
-    
-    methods (Access = private)
+        
         function [aL, aR] = calculateEigenvalues(obj, lhs, rhs)            
             [aLLhs, aRLhs] = obj.calculateEigenvalue(lhs);
             [aLRhs, aRRhs] = obj.calculateEigenvalue(rhs);
@@ -105,16 +105,13 @@ classdef numericalFluxesEuler < handle
             c = sqrt(obj.gamma * ((obj.gamma - 1) * (U(3,:) - 0.5 * U(2,:).^2 ./ U(1,:))) ./ U(1,:)); 
             M = U(2,:) ./ (U(1,:) .* c);
             
-%             if not(obj.CFLconditionVanLeerSatisfied(U, c, M))
-%                 %error('CFL condition of van Leer FVS not satisfied...')
-%             end
-            
             fMass = 0.25 * rho .* c .* (1 + M).^2;
             fMomentum = c .* fMass .* ((obj.gamma-1)*M + 2) / obj.gamma;
             fEnergy = 0.5 * obj.gamma^2 * fMomentum.^2 ./ ...
                       ((obj.gamma^2 - 1) * fMass);
             FP = [fMass; fMomentum; fEnergy];
             FP(:,M >= 1) = obj.fluxFunction(U(:,M >= 1));
+            FP(:,M <= -1) = 0;
         end
         
         function FM = vanLeerFluxMinus(obj, U)
@@ -122,16 +119,13 @@ classdef numericalFluxesEuler < handle
             c = sqrt(obj.gamma * ((obj.gamma - 1) * (U(3,:) - 0.5 * U(2,:).^2 ./ U(1,:))) ./ U(1,:)); 
             M = U(2,:) ./ (U(1,:) .* c);
             
-%             if not(obj.CFLconditionVanLeerSatisfied(U, c, M))
-%                 %error('CFL condition of van Leer FVS not satisfied...')
-%             end
-            
             fMass = - 0.25 * rho .* c .* (1 - M).^2;
             fMomentum = c .* fMass .* ((obj.gamma-1)*M - 2) / obj.gamma;
             fEnergy = 0.5 * obj.gamma^2 * fMomentum.^2 ./ ...
                       ((obj.gamma^2 - 1) * fMass);
             FM = [fMass; fMomentum; fEnergy];
             FM(:,M <= -1) = obj.fluxFunction(U(:,M <= -1));
+            FM(:,M >= 1) = 0;
         end
         
         function b = CFLconditionVanLeerSatisfied(obj, U, c, M)

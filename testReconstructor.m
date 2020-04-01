@@ -5,19 +5,20 @@
 echo off; clear; clc; close all;
 
 n = 10;
-x = linspace(-pi,pi, n);
+dx = 2*pi/n;
+x = -pi:dx:pi;
+x = x(1:end-1);
 u = 1 + 0.2*sin(x);
 
 % x = linspace(0,1, n);
 % u = ones(1, n);
 % u(x >= 0.5) = 0.125;
 
-dx = x(2) - x(1);
 r = reconstructor(dx);
-%[uL, uR] = r.reconstructValuesLinear(u);
-[uL, uR] = r.reconstructValuesPeriodicLDLR(u);
+%[uL, uR] = r.reconstructValuesLinear(u, 'vanLeer');
+[uL, uR] = r.reconstructValuesLDLR(u, 'periodic');
 
-xx = linspace(-pi, pi, 100);
+xx = linspace(-1.1*pi, pi, 100);
 uu = 1 + 0.2*sin(xx);
 
 % m = 200;
@@ -35,7 +36,7 @@ plot(xP, uR, 'go')
 plot(xx, uu, 'b--')
 plot(xP, circshift(uL,1,2), 'r--')
 plot(xP, uR, 'g--')
-xlim([min(xP)-0.05, max(xx)+0.05])
+xlim([min(xP)-0.05, max(xx)])
 legend({'$u_{\Delta x}$', '$u^{\rm L}$', '$u^{\rm R}$', '$u_{\rm{exact}}$'},'Interpreter','latex', 'FontSize', 14, 'Location', 'best')
 xlabel('$x$', 'Interpreter', 'latex');
 ylabel('$u$', 'Interpreter', 'latex');

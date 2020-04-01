@@ -23,8 +23,16 @@ classdef reconstructor < handle
             obj.q = q; 
         end
         
-        function [UL, UR] = reconstructValuesLinear(obj, U)
-            sigma = (circshift(U,-1,2) - circshift(U,1,2)) / obj.dx;
+        function [UL, UR] = reconstructValuesLinear(obj, U, limiter)
+            switch limiter
+                case 'minMod'
+                    Phi = obj.minModLimiter(U - circshift(U,1,2), ...
+                          circshift(U,-1,2) - U);
+                case 'vanLeer'
+                    Phi = obj.vanLeerLimiter(U - circshift(U,1,2), ...
+                          circshift(U,-1,2) - U);
+            end
+            sigma = 0.5 *(circshift(U,-1,2) - circshift(U,1,2)) .* Phi / obj.dx;
             UL = U + 0.5 * sigma * obj.dx;
             UR = U - 0.5 * sigma * obj.dx;
         end
@@ -44,6 +52,16 @@ classdef reconstructor < handle
     end
         
     methods (Access = private)
+        function Phi = minModLimiter(obj, UL, UR)
+            Theta = UL ./ UR;
+            Phi = max(0, min(1, Theta));
+        end
+        
+        function Phi = vanLeerLimiter(obj, UL, UR)
+            Theta = UL ./ UR;
+            Phi = (Theta + abs(Theta)) ./ (1 + Theta);
+        end
+        
         function [UL, UR] = reconstructValuesTransmissiveLDLR(obj, U)
             % Lateral derivatives
             d1 = (U - [U(:,1), U(:,1:end-1)]) / obj.dx;
@@ -82,12 +100,16 @@ classdef reconstructor < handle
         
         function [UL, UR] = reconstructValuesPeriodicLDLR(obj, U)
             % Lateral derivatives
-            d1 = (U - circshift(U,1,2)) / obj.dx;
-            d2 = (circshift(U,-1,2) - U) / obj.dx;
+            UM1 = circshift(U,1,2);
+            %UM1(:,1) = UM1(:,end);
+            UP1 = circshift(U,-1,2);
+            %UP1(:,end) = UP1(:,1);
+            d1 = (U - UM1) / obj.dx;
+            d2 = (UP1 - U) / obj.dx;
             
             [a, ~, c, d] = obj.calculateReconstructionCoefficients(d1, d2);
             [etaAP, etaBP, etaAM, etaBM] = obj.etaFunction(a);
-            
+
             UL = U + obj.dx * (c .* etaAP + d .* etaBP);
             UR = U + obj.dx * (c .* etaAM + d .* etaBM);
         end

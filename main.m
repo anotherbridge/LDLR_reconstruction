@@ -7,9 +7,9 @@ echo off; clear; clc; close all;
 %------------------%
 % Input Parameters %
 %------------------%
-n = 200;
+n = 100;
 gamma = 1.4;
-testCase = 1;
+testCase = 2;
 numericalFlux = 'HLL';
 
 runSimulation(n, gamma, testCase, numericalFlux);
@@ -34,18 +34,16 @@ function runSimulation(n, gamma, testCase, numericalFlux, animationTime)
             sim.plotInitialConditions();
         case 2 
             T = 1;
-            x = linspace(-pi, pi, n);
+            % Correction so that the endpoint is only included once for PBC
+            dx = 2*pi/n;
+            x = -pi:dx:pi;
+            x = x(1:end-1);
             rho0 = 1 + 0.2*sin(x);
             v0 = ones(size(x));
             p0 = ones(size(x));
             sim = solver(gamma, x, rho0, v0, p0, T, numericalFlux, 'periodic');
             sim.plotInitialConditions();
             subplot(2,2,1);
-%             ylim([0.8,1.2]);
-%             subplot(2,2,2);
-%             ylim([0,2]);
-%             subplot(2,2,3);
-%             ylim([0,2]);
         case 3 % Lax problem
             T = 1;
             x = linspace(0, 1, n);

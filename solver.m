@@ -51,7 +51,7 @@ classdef solver < handle
             
             obj.fluxType = fluxType;
             obj.BC = BC;
-            if not(strcmp(obj.BC,'transmissive')     | ...
+            if not(strcmp(obj.BC, 'transmissive')     | ...
                    strcmp(obj.BC, 'periodic')        | ...
                    strcmp(obj.BC, 'reflectiveRight') | ...
                    strcmp(obj.BC, 'reflectiveFull'))
@@ -90,28 +90,28 @@ classdef solver < handle
         end
         
         function solve(obj)
-            disp('Solving the System...')
-            f = waitbar(0,'Solving the System...');
+            disp('Solving the PDE...')
+            f = waitbar(0,'Solving the PDE...');
             tic;
             %for i = 1:obj.nT
             while obj.t(end) < obj.T
                 obj.performUpdateStep();
                 obj.assignResults();
-                waitbar(obj.t(end)/obj.T,f,'Solving the System...');
+                waitbar(obj.t(end)/obj.T,f,'Solving the PDE...');
             end
             toc;
             close(f);
             disp('Succesfully computed the solution with ' + string(obj.nT) + ' time steps.')
         end
         
-        function [rho, v, p, E, c, M, T] = getResults(obj)
+        function [rho, v, p, E, c, M, tEnd] = getResults(obj)
             rho = obj.rho;
             v = obj.v;
             p = obj.p;
             E = obj.E;
             c = obj.c;
             M = obj.M;
-            T = obj.t(end);
+            tEnd = obj.t(end);
         end
         
         function animate(obj, property, playTime)
@@ -223,6 +223,26 @@ classdef solver < handle
             end
         end
         
+%         function L = calculateRightHandSide(obj, U)
+%             UGhost = obj.setGhostCells(U);
+%             [UL, UR] = obj.r.reconstructValuesLDLR(U, obj.BC);
+%             FL = obj.fluxHandle.calculateNumericalFlux(UGhost(1:end-2), UGhost(2:end-1), obj.fluxType);
+%             FR = obj.fluxHandle.calculateNumericalFlux(UL, circshift(UR,-1,2), obj.fluxType);
+%             L = - (FR - FL) / obj.dx;
+%         end
+%         
+%         function UGhost = setGhostCells(obj, U)
+%             switch obj.BC
+%                 case 'periodic'
+%                     UGhost = [U(:,end), U, U(:,1)];
+%                 case 'transmissive'
+%                     UGhost = [U(:,1), U, U(:,end)];
+%                 case 'reflectiveRight'
+%                     UGhost = [U(:,1), U, [U(1,end); -U(2,end); U(3,end)]];
+%                 case 'reflectiveFull'
+%                     UGhost = [[U(1,1); -U(2,1); U(3,1)], U, [U(1,end); -U(2,end); U(3,end)]];
+%             end
+%         end
         function L = calculateRightHandSide(obj, U)
             switch obj.BC 
                 case 'periodic'
@@ -304,8 +324,8 @@ classdef solver < handle
         function performTimeUpdate(obj)
             % 3rd order SSP-RK method
             U1 = obj.U + obj.dt * obj.dUdt;
-            U2 = 0.75 * obj.U + 0.25 * U1 + ...
-                 0.25 * obj.dt * obj.calculateRightHandSide(U1);
+            U2 = (3 * obj.U + U1 + ...
+                 obj.dt * obj.calculateRightHandSide(U1)) / 4;
             obj.U = (obj.U  + 2 * U2 + ...
                      2 * obj.dt * obj.calculateRightHandSide(U2)) / 3;
         end
