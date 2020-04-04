@@ -7,7 +7,7 @@ echo off; clear; clc; close all;
 % Convergence is going to be checked at time T=1
 
 lblSize = 12;
-nVec = [8, 16, 32, 64, 128, 256, 512, 1024];
+nVec = [8, 16, 32, 64, 128];%, 256, 512, 1024];
 gamma = 1.4;
 T = 1;
 numericalFlux = 'vanLeer';

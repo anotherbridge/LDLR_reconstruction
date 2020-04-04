@@ -224,8 +224,9 @@ classdef solver < handle
         end
         
         function L = calculateRightHandSide(obj, U)
-            UGhost = obj.setGhostCells(U);
-            [UL, UR] = obj.r.reconstructValuesLDLR(UGhost, obj.BC);
+            [UL, UR] = obj.r.reconstructValuesLDLR(U, obj.BC);
+            UL = obj.setGhostCells(UL);
+            UR = obj.setGhostCells(UR);
             %FL = F_{i-0.5}; FR = F_{i+0.5}
             FL = obj.fluxHandle.calculateNumericalFlux(UL(:,1:end-2), UR(:,2:end-1), obj.fluxType);
             FR = obj.fluxHandle.calculateNumericalFlux(UL(:,2:end-1), UR(:,3:end), obj.fluxType);
