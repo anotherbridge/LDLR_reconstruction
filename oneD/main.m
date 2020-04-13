@@ -10,7 +10,7 @@ echo off; clear; clc; close all;
 n = 100;
 gamma = 1.4;
 testCase = 3;
-numericalFlux = 'HLL';
+numericalFlux = 'vanLeer';
 
 runSimulation(n, gamma, testCase, numericalFlux);
 
