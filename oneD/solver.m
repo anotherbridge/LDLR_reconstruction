@@ -30,6 +30,7 @@ classdef solver < handle
         r;          % reconstruction handle
         fluxHandle; % flux handle
         fluxType;   % string which chooses the flux function to use
+        recType;    % string containing the type of reconstruction
     end
 
     properties (Constant)
@@ -39,23 +40,32 @@ classdef solver < handle
     end
     
     methods (Access = public)
-        function obj = solver(gamma, x, rho0, v0, p0, T, fluxType, BC)
+        function obj = solver(gamma, x, rho0, v0, p0, T, fluxType, BC, recType)
             % Constructor
             if nargin < 6
                 error('Not enough input arguments!');
             elseif nargin < 7
                 fluxType = 'HLL';
+                BC = 'transmissive';
+                recType = 'none';
             elseif nargin < 8
                 BC = 'transmissive';
+                recType = 'none';
+            elseif nargin < 9
+                recType = 'none';
             end
             
+            obj.recType = recType;
             obj.fluxType = fluxType;
             obj.BC = BC;
-            if not(strcmp(obj.BC, 'transmissive')     | ...
-                   strcmp(obj.BC, 'periodic')        | ...
-                   strcmp(obj.BC, 'reflectiveRight') | ...
-                   strcmp(obj.BC, 'reflectiveFull'))
+            if not(obj.boundaryTypeOk())
                 error('Invalid boundary condition given!');
+            end
+            if not(obj.fluxTypeOk())
+                error('Invalid flux type choosen!');
+            end
+            if not(obj.reconstructionMethodOk())
+                error('Invalid method for reconstruction choosen!');
             end
             
             obj.n = length(x);
@@ -135,7 +145,27 @@ classdef solver < handle
         end
     end
     
-    methods (Access = private)        
+    methods (Access = private) 
+        function b = boundaryTypeOk(obj)
+            b = strcmp(obj.BC, 'transmissive')    | ...
+                strcmp(obj.BC, 'periodic')        | ...
+                strcmp(obj.BC, 'reflectiveRight') | ...
+                strcmp(obj.BC, 'reflectiveFull');
+        end
+        
+        function b = fluxTypeOk(obj)
+            b = strcmp(obj.fluxType, 'vanLeer') | ...
+                strcmp(obj.fluxType, 'HLL')     | ...
+                strcmp(obj.fluxType, 'LF');
+        end
+        
+        function b = reconstructionMethodOk(obj)
+            b = strcmp(obj.recType, 'none')    | ...
+                strcmp(obj.recType, 'minMod')        | ...
+                strcmp(obj.recType, 'vanLeer') | ...
+                strcmp(obj.recType, 'LDLR');
+        end
+        
         function assignFigures(obj)
             f = figure(1);
             portion = 0.6;
@@ -224,12 +254,20 @@ classdef solver < handle
         end
         
         function L = calculateRightHandSide(obj, U)
-            [UL, UR] = obj.r.reconstructValuesLDLR(U, obj.BC);
-            UL = obj.setGhostCells(UL);
-            UR = obj.setGhostCells(UR);
-            %FL = F_{i-0.5}; FR = F_{i+0.5}
-            FL = obj.fluxHandle.calculateNumericalFlux(UL(:,1:end-2), UR(:,2:end-1), obj.fluxType);
-            FR = obj.fluxHandle.calculateNumericalFlux(UL(:,2:end-1), UR(:,3:end), obj.fluxType);
+            switch obj.recType
+                case 'none'
+                    UGhost = obj.setGhostCells(U);
+                    FL = obj.fluxHandle.calculateNumericalFlux(UGhost(:,1:end-2), UGhost(:,2:end-1), obj.fluxType);
+                    FR = obj.fluxHandle.calculateNumericalFlux(UGhost(:,2:end-1), UGhost(:,3:end), obj.fluxType);
+                otherwise
+                   [UL, UR] = obj.r.reconstructValues(U, obj.BC, obj.recType);
+                   UL = obj.setGhostCells(UL);
+                   UR = obj.setGhostCells(UR);
+                   %FL = F_{i-0.5}; FR = F_{i+0.5}
+                   FL = obj.fluxHandle.calculateNumericalFlux(UL(:,1:end-2), UR(:,2:end-1), obj.fluxType);
+                   FR = obj.fluxHandle.calculateNumericalFlux(UL(:,2:end-1), UR(:,3:end), obj.fluxType);
+            end
+                      
             L = - (FR - FL) / obj.dx;
         end
         
@@ -291,8 +329,8 @@ classdef solver < handle
             obj.v = [obj.v; obj.U(2,:) ./ obj.U(1,:)]; 
             obj.p = [obj.p; (obj.gamma - 1) * (obj.U(3,:) - 0.5 * obj.U(2,:).^2 ./ obj.U(1,:))];
             obj.E = [obj.E; obj.U(3,:)];
-            obj.c = sqrt(obj.gamma * obj.p ./ obj.rho);
-            obj.M = [obj.M; obj.U(2,:) ./ (obj.U(1,:) .* obj.c)];
+            %obj.c = sqrt(obj.gamma * obj.p ./ obj.rho);
+            %obj.M = [obj.M; obj.U(2,:) ./ (obj.U(1,:) .* obj.c)];
         end
     end
 end

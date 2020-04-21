@@ -7,14 +7,15 @@ echo off; clear; clc; close all;
 %------------------%
 % Input Parameters %
 %------------------%
-n = 100;
+n = 1000;
 gamma = 1.4;
-testCase = 3;
-numericalFlux = 'vanLeer';
+testCase = 5;
+numericalFlux = 'HLL';
+reconstructionMethod = 'LDLR';
 
-runSimulation(n, gamma, testCase, numericalFlux);
+sim = runSimulation(n, gamma, testCase, numericalFlux, reconstructionMethod);
 
-function runSimulation(n, gamma, testCase, numericalFlux, animationTime)
+function sim = runSimulation(n, gamma, testCase, numericalFlux, reconstructionMethod, animationTime)
     if nargin == 6
         animTime = animationTime; 
     else
@@ -30,7 +31,7 @@ function runSimulation(n, gamma, testCase, numericalFlux, animationTime)
             p0 = ones(1, n);
             rho0(x >= 0.5) = 0.125;
             p0(x >= 0.5) = .1;
-            sim = solver(gamma, x, rho0, v0, p0, T, numericalFlux);
+            sim = solver(gamma, x, rho0, v0, p0, T, numericalFlux, 'transmissive', reconstructionMethod);
             sim.plotInitialConditions();
         case 2 
             T = 1;
@@ -41,7 +42,7 @@ function runSimulation(n, gamma, testCase, numericalFlux, animationTime)
             rho0 = 1 + 0.2*sin(x);
             v0 = ones(size(x));
             p0 = ones(size(x));
-            sim = solver(gamma, x, rho0, v0, p0, T, numericalFlux, 'periodic');
+            sim = solver(gamma, x, rho0, v0, p0, T, numericalFlux, 'periodic', reconstructionMethod);
             sim.plotInitialConditions();
             subplot(2,2,1);
         case 3 % Lax problem
@@ -53,7 +54,7 @@ function runSimulation(n, gamma, testCase, numericalFlux, animationTime)
             rho0(x >= 0.5) = 0.5;
             v0(x >= 0.5) = 0;
             p0(x >= 0.5) = 0.571;
-            sim = solver(gamma, x, rho0, v0, p0, T, numericalFlux, 'reflectiveRight');
+            sim = solver(gamma, x, rho0, v0, p0, T, numericalFlux, 'reflectiveRight', reconstructionMethod);
             sim.plotInitialConditions();
         case 4 % Lax problem
             T = 1;
@@ -64,7 +65,7 @@ function runSimulation(n, gamma, testCase, numericalFlux, animationTime)
             rho0(x >= 0.5) = 0.5;
             v0(x >= 0.5) = 0;
             p0(x >= 0.5) = 0.571;
-            sim = solver(gamma, x, rho0, v0, p0, T, numericalFlux, 'reflectiveFull');
+            sim = solver(gamma, x, rho0, v0, p0, T, numericalFlux, 'reflectiveFull', reconstructionMethod);
             sim.plotInitialConditions();
         case 5 % Shu-Osher shock-acoustic problem
             T = 1.8;
@@ -75,7 +76,7 @@ function runSimulation(n, gamma, testCase, numericalFlux, animationTime)
             rho0(x >= -4) = 1 + 0.2*sin(5*x(x >= -4));
             v0(x >= -4) = 0;
             p0(x >= -4) = 1;
-            sim = solver(gamma, x, rho0, v0, p0, T, numericalFlux, 'transmissive');
+            sim = solver(gamma, x, rho0, v0, p0, T, numericalFlux, 'transmissive', reconstructionMethod);
             sim.plotInitialConditions();
         otherwise
             error('Given test case is not valid!')

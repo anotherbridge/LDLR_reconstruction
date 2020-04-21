@@ -15,8 +15,8 @@ u = 1 + 0.2*sin(x);
 % u(x >= 0.5) = 0.125;
 
 r = reconstructor(dx);
-%[uL, uR] = r.reconstructValuesLinear(u, 'vanLeer');
-[uL, uR] = r.reconstructValuesLDLR(u, 'periodic');
+[uL, uR] = r.reconstructValuesLinear(u, 'periodic', 'vanLeer');
+%[uL, uR] = r.reconstructValuesLDLR(u, 'periodic');
 
 xx = linspace(-1.1*pi, pi, 100);
 uu = 1 + 0.2*sin(xx);

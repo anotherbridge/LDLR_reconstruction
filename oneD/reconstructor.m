@@ -23,16 +23,26 @@ classdef reconstructor < handle
             obj.q = q; 
         end
         
-        function [UL, UR] = reconstructValuesLinear(obj, U, limiter)
+        function [UL, UR] = reconstructValues(obj, U, BC, method)
+             switch method
+                 case 'minMod'
+                    [UL, UR] = obj.reconstructValuesLinear(U, BC, method);
+                 case 'vanLeer'
+                    [UL, UR] = obj.reconstructValuesLinear(U, BC, method);
+                 case 'LDLR'
+                    [UL, UR] = obj.reconstructValuesLDLR(U, BC);
+             end
+        end
+        
+        function [UL, UR] = reconstructValuesLinear(obj, U, BC, limiter)
+            UGhost = obj.setGhostCells(U, BC);
             switch limiter
                 case 'minMod'
-                    Phi = obj.minModLimiter(U - circshift(U,1,2), ...
-                          circshift(U,-1,2) - U);
+                    sigma = obj.minModLimiter(UGhost);
                 case 'vanLeer'
-                    Phi = obj.vanLeerLimiter(U - circshift(U,1,2), ...
-                          circshift(U,-1,2) - U);
+                    sigma = obj.vanLeerLimiter(UGhost);
             end
-            sigma = 0.5 *(circshift(U,-1,2) - circshift(U,1,2)) .* Phi / obj.dx;
+            %sigma = 0.5 *(circshift(U,-1,2) - circshift(U,1,2)) .* Phi / obj.dx;
             UL = U + 0.5 * sigma * obj.dx;
             UR = U - 0.5 * sigma * obj.dx;
         end
@@ -57,14 +67,23 @@ classdef reconstructor < handle
             end
         end
         
-        function Phi = minModLimiter(obj, UL, UR)
-            Theta = UL ./ UR;
-            Phi = max(0, min(1, Theta));
+        function sigma = minModLimiter(obj, UGhost)
+            % Lateral derivatives
+            d1 = (UGhost(:,2:end-1) - UGhost(:,1:end-2)) / obj.dx;
+            d2 = (UGhost(:,3:end) - UGhost(:,2:end-1)) / obj.dx;
+            
+            sigma = d2;
+            sigma(abs(d2) > abs(d1)) = d1(abs(d2) > abs(d1));
+            sigma(d1.*d2 < 0) = 0;
         end
         
-        function Phi = vanLeerLimiter(obj, UL, UR)
-            Theta = UL ./ UR;
-            Phi = (Theta + abs(Theta)) ./ (1 + Theta);
+        function sigma = vanLeerLimiter(obj, UGhost)
+            % Lateral derivatives
+            d1 = (UGhost(:,2:end-1) - UGhost(:,1:end-2)) / obj.dx;
+            d2 = (UGhost(:,3:end) - UGhost(:,2:end-1)) / obj.dx;
+            
+            sigma = 2 ./ (1./d1 + 1./d2);
+            sigma(d1.*d2 < 0) = 0;
         end
         
         function [UL, UR] = calculateValuesLDLR(obj, UGhost)

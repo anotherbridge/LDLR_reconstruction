@@ -5,8 +5,12 @@ To approximate the flux function the following numerical fluxes are implemented
 * Lax-Friedrichs flux (option: LF) and
 * Harten-Lax-van-Leer flux (option: HLL).
 
-The reconstruction of the values on the cell interfaces is calculated
-via the third order Local-Double-Logarithmic-Reconstruction (LDLR). 
+For the reconstruction of the cell interface values several options are
+available:
+* no reconstruction (option: none),
+* min-mod-limiter (option: minMod),
+* van-Leer-limiter (option: vanLeer),
+* local double logarithmic reconstruction (option: LDLR).
 
 Finally the ODE in time is solved by using a Strong-Stability-Preserving
 (SSP) Runge-Kutta method of third order to obtain an overall third order 

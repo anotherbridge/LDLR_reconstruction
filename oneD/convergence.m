@@ -10,7 +10,8 @@ lblSize = 12;
 nVec = [8, 16, 32, 64, 128, 256, 512, 1024];
 gamma = 1.4;
 T = 1;
-numericalFlux = 'vanLeer';
+numericalFlux = 'HLL';
+reconstructionMethod = 'LDLR';
 
 dxVec  = [];
 err    = [];
@@ -28,7 +29,7 @@ for n = nVec
     rho0 = 1 + 0.2*sin(x);
     v0 = ones(size(x));
     p0 = ones(size(x));
-    sim = solver(gamma, x, rho0, v0, p0, T, numericalFlux, 'periodic'); 
+    sim = solver(gamma, x, rho0, v0, p0, T, numericalFlux, 'periodic', reconstructionMethod); 
     sim.solve();
     [rho, v, p, ~, ~, ~, tEnd] = sim.getResults();
     
