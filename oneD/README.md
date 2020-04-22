@@ -26,7 +26,7 @@ Implemented boundary conditions (BCs):
 * transmissive boundaries (option: transmissive)
 * periodic BCs (option: periodic)
 * transmissive left boundary, reflective right boundary (option: reflectiveRight)
-* both boundaries reflective (option: reflectiveFull)
+* both boundaries reflective (option: reflectiveFull)  
 If no BC is given to the solver class transmissive boundaries are set as default.
 
 Test cases available in *main.m*:
@@ -36,6 +36,7 @@ Test cases available in *main.m*:
 * Lax problem with both boundaries reflective (testCase = 4)
 * Shu-Osher shock-acoustic problem (testCase = 5)
 
+Convergence of the chosen methods can be tested with the script *convergence.m*.
 
 
 # Literature
