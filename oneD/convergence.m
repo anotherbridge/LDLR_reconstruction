@@ -12,6 +12,7 @@ gamma = 1.4;
 T = 1;
 numericalFlux = 'HLL';
 reconstructionMethod = 'LDLR';
+integrationMethod = 'RK2';
 
 dxVec  = [];
 err    = [];
@@ -29,7 +30,9 @@ for n = nVec
     rho0 = 1 + 0.2*sin(x);
     v0 = ones(size(x));
     p0 = ones(size(x));
-    sim = solver(gamma, x, rho0, v0, p0, T, numericalFlux, 'periodic', reconstructionMethod); 
+    sim = solver(gamma, x, rho0, v0, p0, T, numericalFlux, ...
+                 'periodic', reconstructionMethod, ...
+                 integrationMethod); 
     sim.solve();
     [rho, v, p, ~, ~, ~, tEnd] = sim.getResults();
     

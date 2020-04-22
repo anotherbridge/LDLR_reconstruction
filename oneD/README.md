@@ -1,20 +1,22 @@
 # Information
 The solver uses a semi-discrete method to solve the 1D-Euler-equations. 
-To approximate the flux function the following numerical fluxes are implemented
+To approximate the flux function the following numerical fluxes are implemented (default: HLL):
 * van-Leer flux vector splitting (option: vanLeer),
 * Lax-Friedrichs flux (option: LF) and
 * Harten-Lax-van-Leer flux (option: HLL).
 
 For the reconstruction of the cell interface values several options are
-available:
+available (default: none):
 * no reconstruction (option: none),
 * min-mod-limiter (option: minMod),
 * van-Leer-limiter (option: vanLeer),
 * local double logarithmic reconstruction (option: LDLR).
 
-Finally the ODE in time is solved by using a Strong-Stability-Preserving
-(SSP) Runge-Kutta method of third order to obtain an overall third order 
-numerical solution.
+The ODE system is solved by time integration. Therefore, the following methods
+are available (default: Euler):
+* Euler method (option: Euler)
+* 2nd order SSP Runge-Kutta method (option: RK2)
+* 3rd order SSP Runge-Kutta method (option: RK3)
  
 Calculations are done on an equidistant grid. 
 Initial conditions need to be given in the form of densitiy, velocity and

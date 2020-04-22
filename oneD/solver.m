@@ -31,6 +31,7 @@ classdef solver < handle
         fluxHandle; % flux handle
         fluxType;   % string which chooses the flux function to use
         recType;    % string containing the type of reconstruction
+        intType;    % string containing the type of integration method
     end
 
     properties (Constant)
@@ -40,7 +41,7 @@ classdef solver < handle
     end
     
     methods (Access = public)
-        function obj = solver(gamma, x, rho0, v0, p0, T, fluxType, BC, recType)
+        function obj = solver(gamma, x, rho0, v0, p0, T, fluxType, BC, recType, intType)
             % Constructor
             if nargin < 6
                 error('Not enough input arguments!');
@@ -48,13 +49,19 @@ classdef solver < handle
                 fluxType = 'HLL';
                 BC = 'transmissive';
                 recType = 'none';
+                intType = 'Euler';
             elseif nargin < 8
                 BC = 'transmissive';
                 recType = 'none';
+                intType = 'Euler';
             elseif nargin < 9
                 recType = 'none';
+                intType = 'Euler';
+            elseif nargin < 10
+                intType = 'Euler';
             end
             
+            obj.intType = intType;
             obj.recType = recType;
             obj.fluxType = fluxType;
             obj.BC = BC;
@@ -66,6 +73,9 @@ classdef solver < handle
             end
             if not(obj.reconstructionMethodOk())
                 error('Invalid method for reconstruction choosen!');
+            end
+            if not(obj.integrationMethodOk())
+                error('Invalid method for time integration choosen!');
             end
             
             obj.n = length(x);
@@ -161,9 +171,15 @@ classdef solver < handle
         
         function b = reconstructionMethodOk(obj)
             b = strcmp(obj.recType, 'none')    | ...
-                strcmp(obj.recType, 'minMod')        | ...
+                strcmp(obj.recType, 'minMod')  | ...
                 strcmp(obj.recType, 'vanLeer') | ...
                 strcmp(obj.recType, 'LDLR');
+        end
+        
+        function b = integrationMethodOk(obj)
+            b = strcmp(obj.intType, 'Euler')    | ...
+                strcmp(obj.intType, 'RK2')      | ...
+                strcmp(obj.intType, 'RK3');
         end
         
         function assignFigures(obj)
@@ -296,6 +312,9 @@ classdef solver < handle
                 obj.t = [obj.t, obj.T];
              end
              obj.nT = obj.nT + 1;
+             if(abs(obj.t(end) - obj.t(end-1)) < 1e-8)
+                 error('Chosen method is not converging...');
+             end
         end
        
         function b = CFLconditionSatisfied(obj)
@@ -316,6 +335,28 @@ classdef solver < handle
         end
         
         function performTimeUpdate(obj)
+            switch obj.intType
+                case 'Euler'
+                    obj.updateStepEuler();
+                case 'RK2'
+                    obj.updateStepRK2();
+                case 'RK3'
+                    obj.updateStepRK3();
+            end
+        end
+        
+        function updateStepEuler(obj)
+            obj.U = obj.U + obj.dt * obj.dUdt;
+        end
+        
+        function updateStepRK2(obj)
+            % 2nd order SSP-RK method
+            U1 = obj.U + obj.dt * obj.dUdt;
+            obj.U = 0.5 * (obj.U + U1 + ...
+                           obj.dt * obj.calculateRightHandSide(U1));
+        end
+        
+        function updateStepRK3(obj)
             % 3rd order SSP-RK method
             U1 = obj.U + obj.dt * obj.dUdt;
             U2 = (3 * obj.U + U1 + ...
